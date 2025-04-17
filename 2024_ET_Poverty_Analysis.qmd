@@ -1,0 +1,854 @@
+---
+title: "2024_ET_Poverty_Analysis"
+format: html
+editor: visual
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(ipumsr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(janitor)
+library(stringr)
+library(ipumsr)
+library(survey)
+library(tidycensus)
+
+#pulling from acs data with tidycensus 
+acs23d <- load_variables(year=2023,dataset = "acs5") 
+```
+
+```{r}
+income_quintiles_texas <- read.csv("raw_data/ACSDT1Y2023.B19081-2024-11-20T151736.csv") |>
+  mutate(Label..Grouping. = sub(" ", "", Label..Grouping.))
+poverty_sex_age <- read.csv("raw_data/ACSDT5Y2022.B17001-2024-11-20T174431.csv")
+poverty_past12 <- read.csv("raw_data/ACSST5Y2022.S1701-2024-11-15T034529.csv")
+regions <- read.csv("County_12_Regions.csv")
+population_est_overall <- read.csv("2023_txpopest_county/2023_txpopest_county.csv")
+population_asg <- read.csv("2023_txpopest_county/alldata.csv")
+location_fips <- read.csv("county_location_state.csv")
+```
+
+```{r}
+fix_names <- function(name) {
+  if (name == "Dewitt") return("DeWitt")
+  if (name == "Mcculloch") return("McCulloch")
+  if (name == "Mclennan") return("McLennan")
+  if (name == "Mcmullen") return("McMullen")
+  if (name == "Elpaso") return("El Paso")
+  if (name == "Sanaugustine") return("San Augustine")
+  if (name == "Sansaba") return("San Saba")
+  if (name == "Sanjacinto") return("San Jacinto")
+  if (name == "Sanpatricio") return("San Patricio")
+  if (name == "Fortbend") return("Fort Bend")
+  if (name == "Deafsmith") return("Deaf Smith")
+  if (name == "Palopinto") return("Palo Pinto")
+  if (name == "Jimhogg") return("Jim Hogg")
+  if (name == "Jimwells") return("Jim Wells")
+  if (name == "Lasalle") return("La Salle")
+  if (name == "Valverde") return("Val Verde")
+  if (name == "Redriver") return("Red River")
+  if (name == "Vanzandt") return("Van Zandt")
+  if (name == "Jeffdavis") return("Jeff Davis")
+  if (name == "Tomgreen") return("Tom Green")
+  if (name == "Liveoak") return("Live Oak")
+  if (name == "De Witt") return("DeWitt")
+  
+
+  return(name)
+}
+```
+
+```{r}
+child_population <- population_asg |>
+  filter(Age%in% c("< 1 Year", "1 Years", "2 Years", "3 Years", "4 Years", "5 Years", "6 Years", "7 Years", "8 Years", "9 Years", "10 Years", "11 Years", "12 Years", "13 Years", "14 Years", "15 Years", "16 Years", "17 Years")) |>
+  filter(County != "STATE OF TEXAS") |>
+  mutate(County = sapply(str_to_title(sub(" COUNTY", "", County)), fix_names)) |>
+  group_by(County) |>
+  summarise(total_pop = sum(Total))
+
+total_population <- population_asg |>
+  filter(County != "STATE OF TEXAS") |>
+  mutate(County = sapply(str_to_title(sub(" COUNTY", "", County)), fix_names)) |>
+  group_by(County) |>
+  summarise(total_pop = sum(Total))
+
+region_children_pop <- left_join(child_population, regions, by = "County") |>
+  group_by(Region) |>
+  summarise(child_region_pop = sum(total_pop))
+  
+```
+
+```{r}
+write.csv(file = "child_population_23.csv", child_population, row.names = FALSE)
+write.csv(file = "total_population_23.csv", total_population, row.names = FALSE)
+```
+
+Cleaning Poverty Sex and Age
+
+```{r}
+clean_psaa <- poverty_sex_age |>
+  select(Label..Grouping., contains("Estimate")) |>
+  mutate(Label..Grouping. = str_trim(Label..Grouping., side = "left"))
+
+
+children_poverty <- clean_psaa |>
+  filter(Label..Grouping. %in% c("Under 5 years", "5 years", "6 to 11 years", 
+                                 "12 to 14 years", "15 years", "16 and 17 years"))
+
+children_below_poverty_line <- children_poverty |>
+  slice(1:12) |>
+  mutate(Label..Grouping. = if_else(row_number() <= 6, paste0("male ", Label..Grouping.), paste0("female ", Label..Grouping.)))
+```
+
+```{r}
+write.csv(file = "cleaned_data/children_under_poverty_line_2023_raw.csv", children_below_poverty_line)
+```
+
+```{r}
+children_below_poverty_line_cleaned <- children_below_poverty_line |>
+  mutate(across(-Label..Grouping., ~ as.numeric(gsub(",", "", .)))) |>
+  clean_names() |>
+  pivot_longer(
+    cols = contains("county"),
+    names_to = "county",
+    values_to = "estimate",
+    values_drop_na = TRUE) |>
+   mutate(county = sapply(sub("_", "", str_to_title(sub("_county_texas_estimate", "", county))), fix_names)) |>
+  rename (County = county)
+```
+
+```{r}
+missing_regions <- anti_join(regions, children_below_poverty_line_cleaned, by = "County")
+poverty_with_regions <- left_join(children_below_poverty_line_cleaned, regions , by = "County")
+```
+
+```{r}
+children_regions <- poverty_with_regions |>
+  group_by(Region) |>
+  summarise(estimate_total = sum(estimate))
+
+percent_children_regions_poverty <- left_join(children_regions, region_children_pop, by = "Region") |>
+  mutate(percent_pov = (estimate_total / child_region_pop) * 100)
+```
+
+```{r}
+write.csv(file = "cleaned_data/children_poverty_texas_regions.csv", percent_children_regions_poverty, row.names = FALSE)
+```
+
+CHILDREN BELOW POVERTY by Counties
+
+```{r}
+clean_past12 <- poverty_past12 |>
+  select(Label..Grouping., contains("Percent")) |>
+  mutate(Label..Grouping. = str_trim(Label..Grouping., side = "left"))
+
+
+children_past12 <- clean_past12 |>
+  filter(Label..Grouping. %in% c("Under 18 years"))
+
+pivot_children_past12 <- children_past12 |>
+  mutate(across(-Label..Grouping., ~ as.numeric(gsub("%", "", .)))) |>
+  clean_names() |>
+  select(where(~ !is.na(.x[1]))) |>
+  pivot_longer(
+    cols = contains("county"),
+    names_to = "county",
+    values_to = "estimate",
+    values_drop_na = TRUE) |>
+   mutate(county = sapply(sub("_", "", str_to_title(sub("_county_texas_percent_below_poverty_level_estimate", "", county))), fix_names)) |>
+  rename (County = county) |>
+  select(County, estimate)
+
+final_pivot_children_past12 <- left_join(location_fips, pivot_children_past12, by = "County") |>
+   mutate(County = paste0(County, " County"))
+```
+
+```{r}
+write.csv(file = "cleaned_data/children_poverty_by_county.csv", final_pivot_children_past12, row.names = FALSE)
+```
+
+BY AGE
+
+```{r}
+clean_poverty_age <- clean_past12 |> 
+  filter(Label..Grouping. %in% c("Under 18 years", "18 to 34 years", "35 to 64 years", "65 years and over")) |> 
+  mutate(across(-Label..Grouping., ~ as.numeric(gsub("%", "", .)))) |> 
+  select(where(~ !any(is.na(.)))) |> 
+  clean_names() |>
+  select(label_grouping, texas_percent_below_poverty_level_estimate)
+```
+
+```{r}
+write.csv(file = "cleaned_data/poverty_by_age.csv", clean_poverty_age, row.names = FALSE)
+```
+
+BY RE
+
+```{r}
+clean_past12_re <- poverty_past12 |>
+  select(Label..Grouping., contains("Estimate")) |>
+  mutate(Label..Grouping. = str_trim(Label..Grouping., side = "left"))
+
+race_ethnicity_past12 <- clean_past12_re |>
+  filter(Label..Grouping. %in% c("Black or African American alone", "American Indian and Alaska Native alone", "Asian alone", "Native Hawaiian and Other Pacific Islander alone", "Some other race alone", "Two or more races", "Hispanic or Latino origin (of any race)", "White alone, not Hispanic or Latino"))
+  
+  
+
+pivot_race_ethnicity_past12 <- race_ethnicity_past12 |>
+  mutate(across(-Label..Grouping., ~ as.numeric(gsub(",", "", gsub("%", "", .))))) |>
+  clean_names() |>
+  select(label_grouping, matches("texas_below_poverty_level_estimate|texas_total_estimate")) |>
+  pivot_longer(
+    cols = -label_grouping, 
+    names_to = "County",
+    values_to = "estimate"
+  ) |>
+  mutate(
+    Estimate_Type = case_when(
+      grepl("_total_estimate$", County) ~ "total_estimate",
+      grepl("_below_poverty_level_estimate$", County) ~ "below_poverty_level_estimate"
+    ),
+    County = sapply(
+      sub("_", "", str_to_title(sub("_county_texas_.*", "", County))),
+      fix_names
+    )
+  ) |>
+  pivot_wider(
+    names_from = Estimate_Type,
+    values_from = estimate
+  ) |>
+  rename(race_ethnicity = label_grouping) |>
+  mutate(
+    race_ethnicity = case_when(
+      race_ethnicity %in% c(
+        "Asian alone", 
+        "Native Hawaiian and Other Pacific Islander alone"
+      ) ~ "Asian and Pacific Islander",
+      TRUE ~ race_ethnicity
+    )
+  ) |>
+  filter(County == "Texastotal_estimate" | County == "Texasbelow_poverty_level_estimate")
+
+#dataset with tiled data 
+pivot_race_ethnicity_past12
+
+#went in and fixed in excel 
+final_re_poverty <- read.csv("cleaned_data/asian_aggregated_re_poverty.csv") |>
+  mutate(percent = below_poverty_level_estimate / total_estimate)
+
+final_re_poverty
+
+write.csv(file = "cleaned_data/final_re_poverty.csv", final_re_poverty, row.names = FALSE)
+```
+
+```{r}
+# write.csv(file = "cleaned_data/intermediate_data/poverty_aggregate_all.csv", race_ethnicity_aggregate, row.names = FALSE)
+```
+
+IPUMS MICRODATA
+
+```{r}
+ipums_data <- read_ipums_micro("raw_data/usa_00015.xml")
+```
+
+```{r}
+cleaned_ipums <- ipums_data |>
+  filter(YEAR > 2013) |>
+  filter(POVERTY != 0) |>
+  filter( !is.na(SPEAKENG) & SPEAKENG != 0 & SPEAKENG !=  8 & SPEAKENG != 9) |>
+  filter(!is.na(VETSTAT) & VETSTAT != 0 & VETSTAT != 9) |>
+  mutate(SPEAKENG_LABEL = case_when(
+    SPEAKENG == 1 ~ "Does not speak English",
+    SPEAKENG == 2 ~ "Yes, speaks English...",
+    SPEAKENG == 3 ~ "Yes, speaks only English",
+    SPEAKENG == 4 ~ "Yes, speaks very well",
+    SPEAKENG == 5 ~ "Yes, speaks well",
+    SPEAKENG == 6 ~ "Yes, but not well",
+    TRUE ~ "Unknown" 
+  )) |> 
+  mutate(count_dummy = 1)
+
+below_poverty_threshold <- cleaned_ipums |>
+  filter(POVERTY <= 100) 
+```
+
+```{r}
+survey_design_below_pl <- svydesign(
+  id = ~CLUSTER,          
+  weights = ~PERWT,       
+  data = cleaned_ipums
+)
+
+#calculate the mean of POVERTY grouped by SPEAKENG
+avg_poverty_by_speakeng <- svyby(
+  ~POVERTY,               
+  ~SPEAKENG,              
+  survey_design_below_pl, 
+  svymean,               
+  vartype = "ci"         
+) |>
+  mutate(SPEAKENG_LABEL = case_when(
+    SPEAKENG == 1 ~ "Does not speak English",
+    SPEAKENG == 2 ~ "Yes, speaks English...",
+    SPEAKENG == 3 ~ "Yes, speaks only English",
+    SPEAKENG == 4 ~ "Yes, speaks very well",
+    SPEAKENG == 5 ~ "Yes, speaks well",
+    SPEAKENG == 6 ~ "Yes, but not well",
+    TRUE ~ "Unknown"  # Fallback for unexpected values
+  ))
+
+#veteran status
+avg_poverty_by_vetstat <- svyby(
+  ~POVERTY,               
+  ~VETSTAT,              
+  survey_design_below_pl, 
+  svymean,               
+  vartype = "ci"         
+)
+```
+
+```{r}
+write.csv(file = "cleaned_data/poverty_by_speakeng.csv", avg_poverty_by_speakeng, row.names = FALSE)
+```
+
+Speak English - Separating by Poverty Level
+
+```{r}
+ipums_100_199 <- cleaned_ipums |>
+  filter(POVERTY > 100 & POVERTY < 200)
+
+ipums_200_299 <- cleaned_ipums |>
+  filter(POVERTY > 200 & POVERTY < 300)
+
+ipums_300_399 <- cleaned_ipums |>
+  filter(POVERTY > 300 & POVERTY < 400)
+
+ipums_400_499 <- cleaned_ipums |>
+  filter(POVERTY > 400 & POVERTY < 500)
+
+ipums_500 <- cleaned_ipums |>
+  filter(POVERTY > 500)
+```
+
+Survey
+
+```{r}
+#below poverty line
+survey_design_below_pl <- svydesign(
+  id = ~CLUSTER,          
+  weights = ~PERWT,       
+  data = below_poverty_threshold
+)
+
+total_speakeng <- svyby(
+  ~1,                        
+  ~SPEAKENG_LABEL,           
+  survey_design_below_pl, 
+  svytotal,                 
+  vartype = "ci"            
+)
+```
+
+Using Dummy
+
+```{r}
+#poverty 
+survey_design_below_pl <- svydesign(
+  id = ~CLUSTER,           
+  weights = ~PERWT,        
+  data = below_poverty_threshold
+)
+
+#all total counts 
+survey_design_all_speakeng_groups <- svydesign(
+  id = ~CLUSTER,           
+  weights = ~PERWT,        
+  data = cleaned_ipums
+)
+
+#below poverty line 
+total_speakeng_bfpl <- svyby(
+  ~count_dummy,            
+  ~SPEAKENG_LABEL,        
+  survey_design_below_pl, 
+  svytotal,                
+  vartype = "ci"           
+) |>
+  rename(total_below_fpl = count_dummy) |>
+  select(SPEAKENG_LABEL, total_below_fpl)
+
+total_speakeng_bfpl
+
+#total counts
+total_speakeng_all <- svyby(
+  ~count_dummy,            
+  ~SPEAKENG_LABEL,        
+  survey_design_all_speakeng_groups, 
+  svytotal,                
+  vartype = "ci"           
+) |>
+  rename(total_speakeng_est = count_dummy) |>
+  select(SPEAKENG_LABEL, total_speakeng_est)
+
+total_speakeng_all
+
+merged_speakeng <- left_join(total_speakeng_bfpl, total_speakeng_all, by = "SPEAKENG_LABEL") |>
+  mutate(percent_poverty = total_below_fpl / total_speakeng_est) |>
+  mutate(percent_not_in_poverty = 1 - percent_poverty)
+
+merged_speakeng
+
+write.csv(file = "cleaned_data/speakeng_poverty.csv", merged_speakeng, row.names = FALSE)
+```
+
+OVERTIME
+
+```{r}
+
+```
+
+#Overall State Levels
+
+```{r}
+tx23state <- get_acs(
+  survey = "acs1",
+  state = "TX",
+  year = 2023,
+  geography = "state",
+  variables = c(total_population = "B17001_001E",
+                total_below_poverty = "B17001_002E", 
+                white_alone = "B17001H_001E", #total 
+                black_alone = "B17001B_001E",
+                aian_alone = "B17001C_001E",
+                asian_alone = "B17001D_001E",
+                nhopi_alone = "B17001E_001E", 
+                other_alone = "B17001F_001E",
+                two_or_more_alone = "B17001G_001E", 
+                hispanic_latino_alone = "B17001I_001E", 
+                white_alone_below = "B17001H_002E", #below poverty 
+                black_alone_below = "B17001B_002E",
+                aian_alone_below = "B17001C_002E",
+                asian_alone_below = "B17001D_002E",
+                nhopi_alone_below = "B17001E_002E", 
+                other_alone_below = "B17001F_002E",
+                two_or_more_alone_below = "B17001G_002E", 
+                
+                hispanic_latino_alone_below = "B17001I_002E"),
+  geometry=F, output="wide")
+
+sum (tx23state$white_alone, tx23state$black_alone, tx23state$aian_alone, tx23state$asian_alone, tx23state$other_alone, tx23state$two_or_more_alone, tx23state$hispanic_latino_alone)
+tx23state$total_population
+
+# tx23state <- tx23state |>
+#   select(total_population, total_below_poverty, white_alone, black_alone, aian_alone, asian_alone, nhopi_alone, two_or_more_alone, hispanic_latino_alone, white_alone_below, black_alone_below, aian_alone_below, asian_alone_below, nhopi_alone_below, other_alone_below, hispanic_latino_alone_below, GEOID, Name)
+```
+
+```{r}
+#over last decade 
+options(scipen = 999)
+poverty_over_time <- read.csv("raw_data/poverty_over_time.csv") |>
+  filter(TimeFrame > 2012) |>
+  filter(DataFormat == "Percent" & LocationType == "State") |>
+  select(Data, TimeFrame) 
+
+
+poverty_2023 <- get_acs(
+  survey = "acs1",
+  state = "TX",
+  year = 2023,
+  geography = "state",
+  variables = c(total_population = "B17001_001E",
+                total_below_poverty = "B17001_002E"), 
+  geometry = F, output = "wide") |>
+  mutate(percent_poverty = total_below_poverty/total_population) |>
+  select(percent_poverty) |>
+  rename(Data = percent_poverty) |>
+  mutate(TimeFrame = 2023)
+
+final_poverty_over_time <- rbind(poverty_2023, poverty_over_time)
+```
+
+```{r}
+write.csv(file = "cleaned_data/poverty_2013_2023_TX.csv", final_poverty_over_time, row.names = FALSE)
+```
+
+POVERTY Disaggregated Race
+
+```{r}
+clean_poverty_data <- function(raw_dataset) {
+  
+  cleaned_poverty_dataset <- raw_dataset |>
+    rename(Race_Group = Recoded.detailed.race.code)|>
+  mutate(
+    Race_Group = case_when(
+      Race_Group %in% c("American Indian alone", 
+                        "Alaska Native alone", 
+                        "American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races") ~ "American Indian and Alaska Native",
+      Race_Group %in% c("Asian alone", 
+                        "Native Hawaiian and Other Pacific Islander alone") ~ "Asian and Pacific Islander",
+      TRUE ~ Race_Group
+    )
+  ) |>
+  group_by(Race_Group) |>
+  mutate(Total.Recode.for.Recoded.detailed.Hispanic.origin..HISP_RC4. = as.numeric(gsub(",", "", Total.Recode.for.Recoded.detailed.Hispanic.origin..HISP_RC4.)), 
+         Hispanic = as.numeric(gsub(",", "", Hispanic)), 
+         Non.Hispanic = as.numeric(gsub(",", "", Non.Hispanic)), 
+         Total = as.numeric(gsub(",", "", Total))) |>
+  summarise(
+    Hispanic = sum(Hispanic, na.rm = TRUE),
+    Non_Hispanic = sum(Non.Hispanic, na.rm = TRUE), 
+    Total.Recode.for.Recoded.detailed.Hispanic.origin..HISP_RC4. = sum(Total.Recode.for.Recoded.detailed.Hispanic.origin..HISP_RC4., na.rum = TRUE), 
+    Total = sum(Total, na.rm = TRUE))
+  
+  hispanic <- as.numeric(cleaned_poverty_dataset[1, 2])
+
+  final_wo_hisp <- cleaned_poverty_dataset |>
+  select(Race_Group, Non_Hispanic, Total) |>
+  rename(Race_PL_Total = Non_Hispanic) |>
+  select(Race_Group, Race_PL_Total, Total)
+  
+  print(final_wo_hisp)
+
+  hispanic_set <- data.frame(
+  Race_Group = "Hispanic",
+  Race_PL_Total = hispanic,
+  Total = 9255820
+  )
+
+
+  final_poverty_dataset <- rbind(final_wo_hisp, hispanic_set) |>
+    filter(Race_Group != "" & Race_Group != 'Total')
+
+
+  within_povertylevel_total = sum(final_poverty_dataset$Race_PL_Total)
+
+  final_poverty_dataset <- final_poverty_dataset |>
+    mutate(Percent_of_Race = Race_PL_Total/Total, 
+           Percent_of_PL_Group = Race_PL_Total/within_povertylevel_total)
+
+  return(final_poverty_dataset)
+}
+
+
+```
+
+```{r}
+#below federal poverty level
+poverty_disaggregated_bfpl <- read.csv("raw_data/all_poverty_disaggregated_2023.csv") 
+final_bfpl <- clean_poverty_data(poverty_disaggregated_bfpl) |>
+  mutate(Poverty_Level = "Below Federal Poverty Line")
+
+write.csv(file = "cleaned_data/hispanic_disaggregated_bfpl_2023.csv", final_bfpl, row.names = FALSE)
+
+#100 to 199
+poverty_100_to_199 <- read.csv("raw_data/100_to_199.csv")
+final_100_to_199 <- clean_poverty_data(poverty_100_to_199) |>
+  mutate(Poverty_Level = "100% to 199% above Federal Poverty Line")
+
+#200 to 299
+poverty_200_to_299 <- read.csv("raw_data/200_to_299.csv")
+final_200_to_299 <- clean_poverty_data(poverty_200_to_299) |>
+  mutate(Poverty_Level = "200% to 299% above Federal Poverty Line")
+
+#300 to 399
+poverty_300_to_399 <- read.csv("raw_data/300_to_399.csv")
+final_300_to_399 <- clean_poverty_data(poverty_300_to_399) |>
+  mutate(Poverty_Level = "300% to 399% above Federal Poverty Line")
+
+#400 to 499
+poverty_400_to_499 <- read.csv("raw_data/400_to_499.csv")
+final_400_to_499 <- clean_poverty_data(poverty_400_to_499) |>
+  mutate(Poverty_Level = "400% to 499% above Federal Poverty Line")
+
+#500+
+poverty_500 <- read.csv("raw_data/500+.csv")
+final_500 <- clean_poverty_data(poverty_500) |>
+  mutate(Poverty_Level = "500% or more above Federal Poverty Line")
+
+final_poverty_line_data <- rbind(final_bfpl, final_100_to_199, final_200_to_299, final_300_to_399, final_400_to_499, final_500)
+
+write.csv(file = "cleaned_data/all_poverty_levels_race_disaggregated_2023.csv", final_poverty_line_data, row.names = FALSE)
+```
+
+```{r}
+
+```
+
+Dissolving for regions
+
+```{r}
+library(sf)
+```
+
+```{r}
+child_poverty_county <- get_acs(
+  survey = "acs5",
+  state = "TX",
+  year = 2023,
+  geography = "county",
+  variables = c(totpop = "B05010_002"), #total under 19
+  geometry=T,
+  output="wide") |>
+  mutate(NAME = gsub(" County, Texas", "", NAME)) |>
+  rename(County = NAME)
+
+child_pov_regions <- left_join(child_poverty_county, regions, by = "County") |>
+  mutate(County = paste(County, "County")) |>
+   select(GEOID, County, Region, geometry)
+```
+
+```{r}
+dissolve_child_pov_regions <- child_pov_regions |>
+  group_by(Region) |>
+  summarise(
+    geometry = st_union(geometry)          
+  )
+
+final_percent_child_pov_dissolve <- left_join(dissolve_child_pov_regions, percent_children_regions_poverty, by = "Region") |>
+  select(Region, geometry, percent_pov)
+
+st_write(final_percent_child_pov_dissolve, "cleaned_data/arcgic_region_child_pov.gpkg", append=FALSE)
+```
+
+NATIVITY and Citizenship Status
+
+```{r}
+nativity <- get_acs(
+  survey = "acs1",
+  state = "TX",
+  year = 2023,
+  geography = "state",
+  variables = c(tot_pop = "B05001_001E", 
+                born_in_us = "B05001_002E",
+                puerto_rico_or_island = "B05001_003E", 
+                born_abroad_us = "B05001_004E", 
+                naturalized = "B05001_005E",
+                not_citizen = "B05001_006E"), #total in pov by nativity
+  geometry=F,
+  output="wide")
+
+nativity_poverty <- get_acs(
+  survey = "acs1",
+  state = "TX",
+  year = 2023,
+  geography = "state",
+  variables = c(tot_pop_pov = "C17025_002E", 
+                below_pov_native = "C17025_003E", 
+                foreign_born_nat_cit = "C17025_005E", 
+                foreign_born_not_cit = "C17025_006E",
+                foreign_born = "C17025_004E",
+                not_citizen = "C17025_006E"), #total in pov by nativity
+  geometry=F,
+  output="wide")
+  
+write.csv(file = "cleaned_data/total_nativity_nums.csv", nativity, row.names = FALSE)
+write.csv(file = "cleaned_data/total_pov_nativity_nums.csv", nativity_poverty, row.names = FALSE)
+
+```
+
+```{r}
+nativity_pov_dataset <- read.csv(file = "cleaned_data/nativity_dataset.csv") |>
+  mutate(Total_Numbers = as.numeric(gsub(",", "", Total_Numbers)), 
+         Percent_Poverty = Poverty_Total/Total_Numbers, 
+         Not_Poverty = 1- Percent_Poverty) 
+  
+
+write.csv(file = "cleaned_data/final_nativity_pov.csv", nativity_pov_dataset, row.names = FALSE)
+```
+
+```{r}
+acs23d <- load_variables(year=2023,dataset = "acs5") 
+```
+
+```{r}
+poverty_broadband_access <- get_acs(
+  survey = "acs5",
+  state = "TX",
+  year = 2023,
+  geography = "state",
+  variables = c(totpop = "B28004_001E", 
+                
+                tot_less_than_ten = "B28004_002E", 
+                less_than_ten_dialup = "B28004_003E",
+                less_than_ten_broadband = "B28004_004E", 
+                less_than_ten_nointernet = "B28004_005E",
+                
+                tot_ten_to_twenty = "B28004_006E", 
+                ten_to_twenty_dialup = "B28004_007E",
+                ten_to_twenty_broadband = "B28004_008E", 
+                ten_to_twenty_nointernet = "B28004_009E", 
+                
+                tot_twenty_to_thirtyfive = "B28004_010E", 
+                twenty_to_thirtyfive_dialup = "B28004_011E", 
+                twenty_to_thirtyfive_broadband = "B28004_012E", 
+                twenty_to_thirtyfive_nointernet = "B28004_013E", 
+                
+                tot_thirtyfive_tofifty = "B28004_014E", 
+                thirtyfive_tofifty_dialup = "B28004_015E", 
+                thirtyfive_tofifty_broadband = "B28004_016E", 
+                thirtyfive_tofifty_nointernet = "B28004_017E", 
+                
+                tot_fifty_to_seventyfive = "B28004_018E", 
+                fifty_to_seventyfive_dialup = "B28004_019E", 
+                fifty_to_seventyfive_broadband = "B28004_020E", 
+                fifty_to_seventyfive_nointernet = "B28004_021E", 
+                
+                tot_seventyfive_more = "B28004_022E", 
+                seventyfive_more_dialup = "B28004_023E", 
+                seventyfive_more_broadband = "B28004_024E", 
+                seventyfive_more_nointernet = "B28004_025E"
+                ), 
+  geometry=F,
+  output="wide") |>
+  select(totpop, 
+         tot_less_than_ten, less_than_ten_dialup, less_than_ten_broadband, less_than_ten_nointernet, 
+         
+         tot_ten_to_twenty, ten_to_twenty_dialup, ten_to_twenty_broadband, ten_to_twenty_nointernet, 
+         
+         tot_twenty_to_thirtyfive, twenty_to_thirtyfive_dialup, twenty_to_thirtyfive_broadband, twenty_to_thirtyfive_nointernet, 
+         
+         tot_thirtyfive_tofifty, thirtyfive_tofifty_dialup, thirtyfive_tofifty_broadband, thirtyfive_tofifty_nointernet, 
+         
+         tot_fifty_to_seventyfive, fifty_to_seventyfive_dialup, fifty_to_seventyfive_broadband, fifty_to_seventyfive_nointernet,
+         
+         tot_seventyfive_more, seventyfive_more_dialup, seventyfive_more_broadband, seventyfive_more_nointernet)
+
+write.csv(file = "raw_data/acs_pull_internetaccess_poverty.csv", poverty_broadband_access, row.names = FALSE)
+poverty_broadband_access
+```
+
+```{r}
+#verifying pivoted right way 
+cleaned_broadband <- read.csv("cleaned_data/acs_broadband_income.csv") |>
+  mutate(verified_totals = DialUp + Broadband + NoInternet) 
+
+cleaned_broadband
+
+final_broadband <- cleaned_broadband |>
+  select(-verified_totals)|>
+  mutate(InternetAcesss = DialUp + Broadband) |>
+  mutate(percent_internet = InternetAcesss/Totals, 
+         percent_nointernet = NoInternet/Totals)
+
+write.csv(file = "cleaned_data/final_percent_internet_poverty.csv", final_broadband, row.names = FALSE)
+```
+
+Healthcare
+
+```{r}
+#Health Insurance Coverage Status by Ratio of Income to Poverty Level in the Past 12 Months by Age
+
+healthcare_access_2023 <- get_acs(
+  survey = "acs5", 
+  state = "TX", 
+  year = 2023, 
+  geography = "state", 
+  variables = c(totpop = "C27016_001E", 
+                tot_below_pov_line = "C27016_002E", 
+                children_pov_tot = "C27016_003E", 
+                children_with_health = "C27016_004E", 
+                children_wo_health = "C27016_005E", 
+                nineteen_sixtyfour_tot = "C27016_006E", 
+                nineteen_sixtyfour_with_health = "C27016_007E", 
+                nineteen_sixtyfour_wo_health = "C27016_008E",
+                sixty_five_plus_with_health_tot = "C27016_009E",
+                sixty_five_plus_with_health = "C27016_010E", 
+                sixty_five_plus_wo_health = "C27016_011E"
+                ), 
+      geometry=F,
+      output="wide") |>
+  select(totpop, tot_below_pov_line, children_pov_tot, children_with_health, children_wo_health, nineteen_sixtyfour_tot, nineteen_sixtyfour_with_health, nineteen_sixtyfour_wo_health, sixty_five_plus_with_health_tot, sixty_five_plus_with_health, sixty_five_plus_wo_health) 
+
+write.csv(file = "raw_data/healthcare_poverty.csv", healthcare_access_2023, row.names = FALSE)
+```
+
+```{r}
+#healthcare
+healthcare_pivoted <- read.csv("cleaned_data/healthcare_poverty.csv") |>
+  mutate(percent_nohealth = no_healthcare/total,
+         healthcare = has_healthcare/total)
+
+write.csv(file = "cleaned_data/percent_healthcare.csv", healthcare_pivoted, row.names = FALSE)
+```
+
+Disability
+
+```{r}
+#Median Earnings in the Past 12 Months (in 2023 Inflation-Adjusted Dollars) by Disability Status by Sex for the Civilian Noninstitutionalized Population 16 Years and Over With Earnings
+disability_median_income_earnings_2023 <- get_acs(
+  survey = "acs5", 
+  state = "TX", 
+  year = 2023,
+  geography = "state", 
+  variables = c(tot_pop = "B18140_001E", 
+                with_dis = "B18140_002E", 
+                without_dis = "B18140_005E" 
+                ), 
+  geometry = FALSE, 
+  output = "tidy") |>
+  mutate(variable = case_when(
+    variable == "B18140_001" ~ "tot_pop",
+    variable == "B18140_002" ~ "with_dis",
+    variable == "B18140_005" ~ "without_dis",
+    TRUE ~ variable 
+  ))
+```
+
+```{r}
+write.csv(file = "cleaned_data/disability_pov_income.csv", disability_median_income_earnings_2023, row.names = FALSE)
+```
+
+Disability Poverty Ratios
+
+```{r}
+#Poverty Status in the Past 12 Months by Disability Status by Employment Status for the Population 20 to 64 Years
+disability_pov_ratio <- get_acs(
+  survey = "acs5", 
+  state = "TX", 
+  year = 2023, 
+  geography = "state", 
+  variables = c(tot_pop = "B23024_001E", 
+                tot_below_pov_level_20_64 = "B23024_002E", 
+                tot_below_pov_dis = "B23024_003E",
+                tot_below_pov_no_dis = "B23024_010E",
+                no_dis_labor = "B23024_011E", 
+                dis_labor = "B23024_004E",
+                dis_no_labor = "B23024_009E", 
+                no_dis_no_labor = "B23024_016E"
+                ), 
+  geometry = F, 
+  output = "wide") |>
+  mutate(percent_dis = tot_below_pov_dis/tot_below_pov_level_20_64,
+         percent_no_dis = 1- percent_dis, 
+         percent_dis_labor = dis_labor/tot_below_pov_dis, 
+         percent_dis_nolabor = dis_no_labor/tot_below_pov_dis,
+         percent_no_dis_labor = no_dis_labor/tot_below_pov_no_dis,
+         percent_no_dis_no_labor = no_dis_no_labor/tot_below_pov_no_dis) |>
+  select(tot_pop, tot_below_pov_level_20_64, tot_below_pov_dis, tot_below_pov_no_dis,dis_labor, no_dis_labor, dis_no_labor, no_dis_no_labor, percent_dis, percent_no_dis, percent_dis_labor, percent_dis_nolabor,  percent_no_dis_labor, percent_no_dis_no_labor)
+```
+
+```{r}
+overall_dis <- disability_pov_ratio |>
+  select(tot_below_pov_level_20_64, tot_below_pov_dis, tot_below_pov_no_dis, percent_dis, percent_no_dis
+         )
+  
+dis_labor <- disability_pov_ratio |>
+  select(no_dis_labor, dis_labor, dis_no_labor, no_dis_no_labor, percent_dis_labor, percent_dis_nolabor, percent_no_dis_labor, percent_no_dis_no_labor)
+
+write.csv(file = "cleaned_data/overall_dis_poverty.csv", overall_dis, row.names = FALSE)
+write.csv(file = "cleaned_data/labor_dis_poverty.csv", dis_labor, row.names = FALSE)
+```
+
+Poverty In US
+
+```{r}
+us_poverty_rate <- read.csv("raw_data/usa_poverty_levels.csv") |>
+  filter(TimeFrame > 2012 & Location == "United States") |>
+  filter(DataFormat == "Percent") |>
+  select(Location, TimeFrame, Data)
+
+write.csv(file = "cleaned_data/us_poverty_overtime.csv", us_poverty_rate, row.names = FALSE)
+```

@@ -1,0 +1,81 @@
+﻿Dataset: ACS 5-Year Estimates Public Use Microdata Sample (2022),,,,,,,,,,,,,,,,,,,,
+Weight: Person weight (PWGTP),,,,,,,,,,,,,,,,,,,,
+Universe:,,,,,,,,,,,,,,,,,,,,
+Selected Geographies:,,,,,,,,,,,,,,,,,,,,
+  Texas,,,,,,,,,,,,,,,,,,,,
+Variable's Restrictions:,,,,,,,,,,,,,,,,,,,,
+"  Broadband (high speed) Internet service such as cable, fiber optic, or DSL service (HISPEED)",,,,,,,,,,,,,,,,,,,,
+    Yes,,,,,,,,,,,,,,,,,,,,
+    No,,,,,,,,,,,,,,,,,,,,
+  Access to the Internet (ACCESSINET),,,,,,,,,,,,,,,,,,,,
+"    Yes, by paying a cell phone company or Internet service provider",,,,,,,,,,,,,,,,,,,,
+"    Yes, without paying a cell phone company or Internet service provider",,,,,,,,,,,,,,,,,,,,
+"    No access to the Internet at this house, apartment, or mobile home",,,,,,,,,,,,,,,,,,,,
+  Income-to-poverty ratio recode (POVPIP),,,,,,,,,,,,,,,,,,,,
+    Below 501 percent,,,,,,,,,,,,,,,,,,,,
+    501 percent or more,,,,,,,,,,,,,,,,,,,,
+,,,Recode for Income-to-poverty ratio recode (POVPIP_RC1),,,,,,,,,,,,,,,,,
+,,,Between 0 and 99,,,Between 100 and 199,,,Between 200 and 299,,,Between 300 and 399,,,Between 400 and 499,,,500,,
+,,,Recode for Recoded detailed Hispanic origin (HISP_RC4),,,Recode for Recoded detailed Hispanic origin (HISP_RC4),,,Recode for Recoded detailed Hispanic origin (HISP_RC4),,,Recode for Recoded detailed Hispanic origin (HISP_RC4),,,Recode for Recoded detailed Hispanic origin (HISP_RC4),,,Recode for Recoded detailed Hispanic origin (HISP_RC4),,
+Group,"Recoded detailed race code (Note: due to space restrictions, some labels may be truncated.)",Total,Total Recode for Recoded detailed Hispanic origin (HISP_RC4),Hispanic,Non Hispanic,Total Recode for Recoded detailed Hispanic origin (HISP_RC4),Hispanic,Non Hispanic,Total Recode for Recoded detailed Hispanic origin (HISP_RC4),Hispanic,Non Hispanic,Total Recode for Recoded detailed Hispanic origin (HISP_RC4),Hispanic,Non Hispanic,Total Recode for Recoded detailed Hispanic origin (HISP_RC4),Hispanic,Non Hispanic,Total Recode for Recoded detailed Hispanic origin (HISP_RC4),Hispanic,Non Hispanic
+,Total,"18,118,879",3148190,1694735,1453455,4446203,2421794,2024409,4236612,1996310,2240302,3536747,1376731,2160016,2729936,884266,1845670,21191,4045,17146
+ -> Between 1 and 18,,"5,414,395",1206817,780833,425984,1526166,944241,581925,1183169,628786,554383,875264,371258,504006,618121,221592,396529,4858,1166,3692
+,White alone,"2,772,072",544981,372945,172036,725095,441355,283740,621514,297825,323689,504537,178855,325682,373236,104927,268309,2709,404,2305
+,Black or African American alone,"722,768",200518,10558,189960,213599,12440,201159,146990,7613,139377,99451,4610,94841,61696,3311,58385,514,0,514
+,American Indian alone,"22,069",4387,3508,879,7001,5502,1499,5320,4002,1318,3338,2113,1225,2023,1442,581,0,0,0
+,Alaska Native alone,258,61,46,15,15,6,9,58,18,40,61,50,11,63,0,63,0,0,0
+,"American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races","10,643",2412,2235,177,3953,3498,455,2175,2074,101,1402,1187,215,701,469,232,0,0,0
+,Asian alone,"196,245",27598,1131,26467,44320,1528,42792,42509,1076,41433,41406,1168,40238,39654,616,39038,758,0,758
+,Native Hawaiian and Other Pacific Islander alone,"4,416",1132,468,664,1112,163,949,1185,289,896,839,20,819,148,88,60,0,0,0
+,Some Other Race alone,"542,974",155994,152895,3099,184367,179446,4921,114996,111381,3615,58375,55498,2877,29138,26949,2189,104,104,0
+,Two or More Races,"1,142,950",269734,237047,32687,346704,300303,46401,248422,204508,43914,165855,127757,38098,111462,83790,27672,773,658,115
+ -> Between 19 and 36,,"5,130,804",918050,452391,465659,1250178,682479,567699,1229686,617479,612207,997683,437415,560268,730270,270212,460058,4937,690,4247
+,White alone,"2,753,904",470684,209113,261571,633013,310994,322019,648029,282299,365730,565064,205675,359389,433961,127129,306832,3153,206,2947
+,Black or African American alone,"701,361",141337,5424,135913,175600,5630,169970,170708,5310,165398,125743,3762,121981,87083,3036,84047,890,0,890
+,American Indian alone,"25,232",4095,3163,932,7565,6158,1407,5899,4590,1309,4297,2915,1382,3373,2472,901,3,3,0
+,Alaska Native alone,190,10,0,10,27,27,0,52,7,45,53,42,11,48,0,48,0,0,0
+,"American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races","11,926",1919,1600,319,3026,2685,341,3022,2869,153,2355,1998,357,1604,1383,221,0,0,0
+,Asian alone,"226,394",44046,1094,42952,43378,991,42387,47908,1357,46551,47194,1067,46127,43551,485,43066,317,0,317
+,Native Hawaiian and Other Pacific Islander alone,"6,268",962,141,821,1403,276,1127,2028,238,1790,1479,203,1276,396,133,263,0,0,0
+,Some Other Race alone,"526,382",100844,98400,2444,150581,147766,2815,136725,133556,3169,85614,82583,3031,52421,49920,2501,197,197,0
+,Two or More Races,"879,147",154153,133456,20697,235585,207952,27633,215315,187253,28062,165884,139170,26714,107833,85654,22179,377,284,93
+ -> Between 37 and 54,,"3,952,594",543539,289333,254206,867509,501625,365884,939911,467592,472319,869537,355371,514166,725829,243712,482117,6269,1430,4839
+,White alone,"2,070,107",254364,118616,135748,411107,211991,199116,475961,201800,274161,490555,160102,330453,434021,106015,328006,4099,497,3602
+,Black or African American alone,"528,814",83545,2008,81537,112323,2316,110007,130528,2524,128004,112297,1804,110493,89534,1978,87556,587,40,547
+,American Indian alone,"22,358",3408,2471,937,5897,4321,1576,5492,4440,1052,4259,2740,1519,3302,2165,1137,0,0,0
+,Alaska Native alone,140,31,9,22,3,0,3,9,0,9,33,20,13,64,0,64,0,0,0
+,"American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races","8,701",966,805,161,2584,2275,309,2129,1989,140,1673,1388,285,1349,1098,251,0,0,0
+,Asian alone,"213,488",23504,396,23108,40965,644,40321,49494,531,48963,51564,653,50911,47376,364,47012,585,0,585
+,Native Hawaiian and Other Pacific Islander alone,"4,014",611,136,475,781,145,636,852,184,668,1268,37,1231,502,221,281,0,0,0
+,Some Other Race alone,"411,651",69299,67624,1675,119788,118158,1630,105609,102985,2624,71758,69748,2010,44993,42598,2395,204,204,0
+,Two or More Races,"693,321",107811,97268,10543,174061,161775,12286,169837,153139,16698,136130,118879,17251,104688,89273,15415,794,689,105
+ -> Between 55 and 72,,"2,692,854",369269,136075,233194,579719,230223,349496,644115,231309,412806,592697,176669,416028,503565,124287,379278,3489,496,2993
+,White alone,"1,642,882",198987,51454,147533,329497,94963,234534,384093,95242,288851,387214,76983,310231,340614,52613,288001,2477,161,2316
+,Black or African American alone,"335,267",57987,452,57535,72171,895,71276,79999,864,79135,67461,313,67148,57259,522,56737,390,0,390
+,American Indian alone,"11,688",1681,861,820,2908,1525,1383,2603,1596,1007,2545,1480,1065,1946,945,1001,5,0,5
+,Alaska Native alone,90,0,0,0,36,0,36,32,0,32,22,0,22,0,0,0,0,0,0
+,"American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races","4,416",594,326,268,1194,915,279,996,804,192,952,843,109,680,506,174,0,0,0
+,Asian alone,"130,193",17914,108,17806,29713,193,29520,31794,191,31603,26846,289,26557,23756,45,23711,170,0,170
+,Native Hawaiian and Other Pacific Islander alone,"2,059",460,39,421,305,7,298,588,27,561,558,123,435,148,17,131,0,0,0
+,Some Other Race alone,"210,702",32605,31298,1307,55997,53697,2300,58035,56396,1639,38035,36765,1270,25890,24629,1261,140,81,59
+,Two or More Races,"355,557",59041,51537,7504,87898,78028,9870,85975,76189,9786,69064,59873,9191,53272,45010,8262,307,254,53
+ -> Between 73 and 90,,"855,454",100926,33156,67770,203714,57859,145855,221014,46888,174126,186503,33361,153142,141781,22367,119414,1516,263,1253
+,White alone,"622,303",60629,12712,47917,140328,25186,115142,164709,20210,144499,144605,13918,130687,110963,10538,100425,1069,75,994
+,Black or African American alone,"68,628",10631,58,10573,18793,114,18679,16284,23,16261,12847,158,12689,9958,92,9866,115,4,111
+,American Indian alone,"2,672",426,178,248,513,297,216,857,646,211,485,297,188,391,148,243,0,0,0
+,Alaska Native alone,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+,"American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races","1,013",243,148,95,230,138,92,230,179,51,210,127,83,100,44,56,0,0,0
+,Asian alone,"37,926",6989,59,6930,8077,20,8057,9860,128,9732,6584,38,6546,6282,0,6282,134,0,134
+,Native Hawaiian and Other Pacific Islander alone,486,98,7,91,290,0,290,17,7,10,53,0,53,28,0,28,0,0,0
+,Some Other Race alone,"44,875",8985,8393,592,14099,13768,331,10538,10065,473,6936,6703,233,4283,3891,392,34,34,0
+,Two or More Races,"77,551",12925,11601,1324,21384,18336,3048,18519,15630,2889,14783,12120,2663,9776,7654,2122,164,150,14
+ -> Between 91 and 99,,"72,778",9589,2947,6642,18917,5367,13550,18717,4256,14461,15063,2657,12406,10370,2096,8274,122,0,122
+,White alone,"54,017",6644,1125,5519,13321,2460,10861,14463,1734,12729,11896,1041,10855,7571,833,6738,122,0,122
+,Black or African American alone,"5,209",731,15,716,1575,9,1566,1080,0,1080,995,0,995,828,0,828,0,0,0
+,American Indian alone,226,0,0,0,80,34,46,59,0,59,77,0,77,10,4,6,0,0,0
+,Alaska Native alone,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+,"American Indian and Alaska Native tribes specified; or American Indian or Alaska Native, not specified and no other races",30,0,0,0,4,0,4,13,13,0,0,0,0,13,0,13,0,0,0
+,Asian alone,"2,445",269,6,263,947,0,947,395,0,395,315,0,315,519,0,519,0,0,0
+,Native Hawaiian and Other Pacific Islander alone,61,27,15,12,0,0,0,28,0,28,6,0,6,0,0,0,0,0,0
+,Some Other Race alone,"3,817",681,606,75,1004,1004,0,1169,1157,12,614,614,0,349,331,18,0,0,0
+,Two or More Races,"6,973",1237,1180,57,1986,1860,126,1510,1352,158,1160,1002,158,1080,928,152,0,0,0

@@ -1,0 +1,4 @@
+"GEOID","NAME","variable","estimate","moe"
+"48","Texas","tot_pop",42622,180
+"48","Texas","with_dis",32255,406
+"48","Texas","without_dis",43736,181
